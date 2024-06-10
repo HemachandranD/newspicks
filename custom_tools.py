@@ -15,6 +15,9 @@ def scrape_top_news(category):
     """Take the category as an input string.
     Scrape top first news from the category,
     returns the output as an string."""
-    response = newsapi.get_top_headlines(category=category)
-    response = response["articles"][0]
-    return response
+    try:
+        response = newsapi.get_top_headlines(category=category)
+        response = response["articles"][0:5]
+        return response
+    except Exception as e:
+        print(e)

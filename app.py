@@ -22,7 +22,10 @@ class Input(BaseModel):
 
 
 def parse_agent_output(agent_output):
-    return agent_output["output"]
+    try:
+        return agent_output['output']
+    except Exception as e:
+        print("Unable to parse the output: {}", e)
 
 
 chain = (create_agent_executor() | RunnableLambda(parse_agent_output)).with_types(
