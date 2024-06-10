@@ -1,44 +1,19 @@
-import os
-
-from dotenv import find_dotenv, load_dotenv
-from langchain.agents import AgentExecutor, create_openai_tools_agent, tool
+from langchain.agents import AgentExecutor, create_openai_tools_agent
 from langchain.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
     MessagesPlaceholder,
     SystemMessagePromptTemplate,
 )
-from langchain.pydantic_v1 import BaseModel
-from langchain_core.runnables import RunnableLambda
 from langchain_openai import ChatOpenAI
-from newsapi import NewsApiClient
 
-load_dotenv(find_dotenv())
-NEWSAPI_KEY = os.getenv("NEWSAPI_KEY")
-# Init
-newsapi = NewsApiClient(api_key=NEWSAPI_KEY)
-
-
-@tool
-def scrape_top_news(source):
-    """Take the source as an input string. Scrape top news from bbc-news,
-    returns the output as an string."""
-    response = newsapi.get_top_headlines(sources=source)
-    response = response["articles"][0]
-    return response
-
-
-class Input(BaseModel):
-    input: str
-
-
-def parse_agent_output(agent_output):
-    return agent_output["output"]
+from custom_tools import scrape_top_news
 
 
 def create_agent_executor():
-    prompt_template = """Give the source {input}, get the News Title and URL of the content.
-                                Your answer should contain News Title and the URL as an hyperlink."""
+    prompt_template = """Give the {input} understand on which category the user wants to read the news.
+    The category should be one of these 'business', 'entertainment', 'general', 'health', 'science', 'sports', 'technology'.
+    Get the News Title and URL of the content and Your answer should contain News Title and the URL of the content."""
     prompt = ChatPromptTemplate.from_messages(
         [
             SystemMessagePromptTemplate.from_template("You are a helpful assistant."),
@@ -53,12 +28,7 @@ def create_agent_executor():
     agent_tools = [scrape_top_news]
     langchain_agent = create_openai_tools_agent(llm, agent_tools, prompt)
     agent_executor = AgentExecutor(
-        agent=langchain_agent, tools=agent_tools, return_intermediate_steps=True
+        agent=langchain_agent, tools=agent_tools, return_intermediate_steps=False
     )
 
     return agent_executor
-
-
-chain = (create_agent_executor() | RunnableLambda(parse_agent_output)).with_types(
-    input_type=Input, output_type=str
-)
